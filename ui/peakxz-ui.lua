@@ -112,7 +112,7 @@ TitleText.BorderSizePixel = 0
 TitleText.Position = UDim2.new(0.21137026, 0, 0.00684931502, 0)
 TitleText.Size = UDim2.new(0, 198, 0, 31)
 TitleText.Font = Enum.Font.SourceSansBold
-TitleText.Text = getgenv().settings.Script_Title
+TitleText.Text = getgenv().AuthGuardSettings.Script_Title or "Key System"
 TitleText.TextColor3 = Color3.fromRGB(152, 152, 152)
 TitleText.TextScaled = true
 TitleText.TextSize = 23.000
@@ -127,7 +127,7 @@ DescriptionText.BorderSizePixel = 0
 DescriptionText.Position = UDim2.new(0.131195337, 0, 0.55479455, 0)
 DescriptionText.Size = UDim2.new(0, 253, 0, 31)
 DescriptionText.Font = Enum.Font.SourceSansBold
-DescriptionText.Text = "By completing a quick checkpoint, you will receive a" .. tonumber(getgenv().settings.KeyExpiration) .. "-hour key."
+DescriptionText.Text = "By completing a quick checkpoint, you will receive a" .. tonumber(getgenv().AuthGuardSettings.KeyExpiration) .. "-hour key." or "By completing a quick checkpoint, you will receive a 24-hour key."
 DescriptionText.TextColor3 = Color3.fromRGB(152, 152, 152)
 DescriptionText.TextScaled = true
 DescriptionText.TextSize = 23.000
@@ -478,58 +478,80 @@ local dragging = false
 local dragInput, dragStart, startPos
 
 local function delui(type)
-    if type == true then
-    local playerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
-    if playerGui then
-        for _, gui in ipairs(playerGui:GetChildren()) do
-            if gui.Name == "key" then
-                gui:Destroy()
-            end
-        end
-    end
-    end
+	if type == true then
+	local playerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+	if playerGui then
+		for _, gui in ipairs(playerGui:GetChildren()) do
+			if gui.Name == "key" then
+				gui:Destroy()
+			end
+		end
+	end
+	end
 end
 
 local function update(input)
-    if not dragging then return end
-    local delta = input.Position - dragStart
-    frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
-        startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	if not dragging then return end
+	local delta = input.Position - dragStart
+	frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+		startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 end
 
 frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = frame.Position
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
 
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
 end)
 
 frame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
 end)
 
 UIS.InputChanged:Connect(function(input)
-    if input == dragInput then
-        update(input)
-    end
+	if input == dragInput then
+		update(input)
+	end
 end)
 
 local clickCount = 0
 
 DiscordButton.MouseButton1Click:Connect(function()
-    clickCount += 1
-    if clickCount >= 5 then
-        delui(true)
-    end
+	clickCount += 1
+	setclipboard(getgenv().AuthGuardSettings.InviteCode or sHU3jFKUVc)
+	HttpService = cloneref(game:GetService("HttpService"))
+		httprequest = (http and http.request) or http_request or (fluxus and fluxus.request) or request
+		if httprequest then
+			httprequest(
+				{
+					Url = "http://127.0.0.1:6463/rpc?v=1",
+					Method = "POST",
+					Headers = {
+						["Content-Type"] = "application/json",
+						Origin = "https://discord.com"
+					},
+					Body = HttpService:JSONEncode(
+						{
+							cmd = "INVITE_BROWSER",
+							nonce = HttpService:GenerateGUID(false),
+							args = {code = getgenv().AuthGuardSettings.InviteCode or sHU3jFKUVc}
+						}
+					)
+				}
+			)
+		end
+	if clickCount >= 5 then
+		delui(true)
+	end
 end)
 
 local HttpService = game:GetService("HttpService")
@@ -539,82 +561,84 @@ local Script_Key = "" -- will set from TextBox or saved key
 
 
 local function submittext(text)
-    if SubmitText then
-        SubmitText.Text = text
-        task.delay(2.5, function()
-            if SubmitText then
-                SubmitText.Text = "Submit"
-            end
-        end)
-    end
+	if SubmitText then
+		SubmitText.Text = text
+		task.delay(2.5, function()
+			if SubmitText then
+				SubmitText.Text = "Submit"
+			end
+		end)
+	end
 end
 
 local function saveKey(Script_Key)
-    writefile(fileName, HttpService:JSONEncode({key = Script_Key}))
+	writefile(fileName, HttpService:JSONEncode({key = Script_Key}))
 end
 
 local function loadKey()
-    if isfile(fileName) then
-        local data = HttpService:JSONDecode(readfile(fileName))
-        return data.key
-    end
-    return nil
+	if isfile(fileName) then
+		local data = HttpService:JSONDecode(readfile(fileName))
+		return data.key
+	end
+	return nil
 end
 
 xoreByteCodeValue = false
 local function autoConfirmKey(keyToCheck)
-    if AuthGuard:validateKey(keyToCheck) then
-        submittext("Key Was Valid")
-        saveKey(keyToCheck)
+	if AuthGuard:validateKey(keyToCheck) then
+		submittext("Key Was Valid")
+		saveKey(keyToCheck)
 
-        delui(true)
+		delui(true)
 
-        xoreByteCodeValue = true
-    else
-        submittext("Key Was Invalid")
-        xoreByteCodeValue = false
-    end
-    xoreByteCodeValue = true
+		xoreByteCodeValue = true
+		xoreByteCodeValue = false
+	else
+		submittext("Key Was Invalid")
+		xoreByteCodeValue = false
+	end
+	xoreByteCodeValue = true
 end
 
 -- Confirm button clicked
 if _2BConfirmKey then
-    _2BConfirmKey.MouseButton1Click:Connect(function()
-        if TextBox then
-            Script_Key = TextBox.Text
-            autoConfirmKey(Script_Key)
-        end
-    end)
+	_2BConfirmKey.MouseButton1Click:Connect(function()
+		if TextBox then
+			Script_Key = TextBox.Text
+			autoConfirmKey(Script_Key)
+		end
+	end)
 end
 
 -- Checkpoint button clicked
 if CheckPoint2 then
-    CheckPoint2.MouseButton1Click:Connect(function()
-        local link = AuthGuard:getLink()
-        if link then
-            setclipboard(link)
-            submittext("Link Copied, Paste In Browser")
-        else
-            submittext("Failed to Retrieve Link")
-        end
-    end)
+	CheckPoint2.MouseButton1Click:Connect(function()
+		local link = AuthGuard:getLink()
+		if link then
+			setclipboard(link)
+			submittext("Link Copied, Paste In Browser")
+		else
+			submittext("Failed to Retrieve Link")
+		end
+	end)
 end
 
 -- Preload saved key if exists
 local savedKey = loadKey()
 if savedKey then
-    if TextBox then
-        TextBox.Text = savedKey
-    end
-    autoConfirmKey(savedKey)
+	if TextBox then
+		TextBox.Text = savedKey
+	end
+	autoConfirmKey(savedKey)
 end
 
 -- Also check if Script_Key is set globally
 if Script_Key and #Script_Key > 0 and not keyValidated then
-    autoConfirmKey(Script_Key)
+	autoConfirmKey(Script_Key)
 end
 
--- WAIT for key validation AND key valid
-repeat task.wait() until xoreByteCodeValue 
 
+keysystem()
+repeat task.wait() until xoreByteCodeValue 
+xoreByteCodeValue = false
 delui(true)
